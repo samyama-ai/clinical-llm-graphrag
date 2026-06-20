@@ -73,7 +73,8 @@ def run(dataset: str, n: int, limit_edges: int | None, do_judge: bool):
         q_emb = embed_query(conv[:2000])
         ctx_kg = primekg.retrieve(client, q_emb)
         ctx_flat = flat_context(client, q_emb)
-        rec = {"id": it["id"], "kg_facts": ctx_kg.count("\n") + 1 if ctx_kg else 0}
+        rec = {"id": it["id"], "question": conv[:300], "kg_facts": ctx_kg.count("\n") + 1 if ctx_kg else 0,
+               "ctx_kg": ctx_kg, "ctx_flat": ctx_flat}
         ans = {"A0": answer(conv, None, "A0"),
                "A_flat": answer(conv, ctx_flat, "A_flat"),
                "A_kg": answer(conv, ctx_kg, "A_kg")}

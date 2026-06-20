@@ -134,21 +134,32 @@ def build_vector_index(client, pids, embs) -> dict:
     return {"indexed": added, "dim": dim}
 
 
-def retrieve(client, q_emb, k: int = 8, max_neighbors: int = 12) -> str:
-    """Hybrid retrieval: ANN over node embeddings -> 1-hop subgraph -> text context for grounding."""
+# Clinically-meaningful relations for grounding (exclude noisy *_protein associations, which are
+# molecular and unhelpful for clinical advice; they stay in the graph for mechanism queries).
+_CLINICAL_RELS = {
+    "INDICATION", "CONTRAINDICATION", "OFF_LABEL_USE", "DRUG_EFFECT", "DRUG_DRUG",
+    "DISEASE_PHENOTYPE_POSITIVE", "DISEASE_PHENOTYPE_NEGATIVE", "DISEASE_DISEASE", "PHENOTYPE_PHENOTYPE",
+}
+
+
+def retrieve(client, q_emb, k: int = 8, max_neighbors: int = 30, keep=_CLINICAL_RELS, max_lines: int = 40) -> str:
+    """Hybrid retrieval: ANN over node embeddings -> 1-hop subgraph (clinical relations only)
+    -> text context. Filters out *_protein noise so grounding stays clinically precise (Pillar-1)."""
     hits = client.vector_search("Entity", "emb", [float(x) for x in q_emb], k)
     lines, seen = [], set()
-    for nid, score in hits:
+    for nid, _ in hits:
         rows = client.query(
             "MATCH (a) WHERE id(a)=%d MATCH (a)-[r]-(b:Entity) "
             "RETURN a.name, type(r), b.name LIMIT %d" % (nid, max_neighbors)).records
         for a, rel, b in rows:
+            if keep is not None and rel.upper() not in keep:
+                continue
             key = (a, rel, b)
             if key in seen:
                 continue
             seen.add(key)
-            lines.append(f"- {a} —[{rel.lower().replace('_',' ')}]→ {b}")
-    return "\n".join(lines[:60])
+            lines.append(f"- {a} —[{rel.lower().replace('_', ' ')}]→ {b}")
+    return "\n".join(lines[:max_lines])
 
 
 if __name__ == "__main__":
