@@ -20,7 +20,8 @@ MEDQA_HF = "GBaker/MedQA-USMLE-4-options"
 HEALTHBENCH_HF = "openai/healthbench"
 # HealthBench ships as separate JSONL files with distinct schemas; pick explicitly.
 HEALTHBENCH_FILES = {
-    "healthbench": "2025-05-07-06-14-12_oss_eval.jsonl",   # full set (Gate B vs Nature 88.0)
+    "healthbench": "2025-05-07-06-14-12_oss_eval.jsonl",   # full set (~12 rubrics/item, penalties)
+    "consensus": "consensus_2025-05-09-20-00-46.jsonl",    # Consensus variant — the paper's 88.0 scale
     "healthbench_hard": "hard_2025-05-08-21-00-10.jsonl",  # HealthBench Hard (H1 headline)
 }
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
@@ -101,6 +102,7 @@ def build(n: int, seed: int) -> dict:
     loaders = [
         ("medqa", _load_medqa),
         ("healthbench", lambda: _load_healthbench("healthbench")),
+        ("consensus", lambda: _load_healthbench("consensus")),
         ("healthbench_hard", lambda: _load_healthbench("healthbench_hard")),
     ]
     for name, loader in loaders:

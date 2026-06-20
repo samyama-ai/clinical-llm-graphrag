@@ -31,23 +31,42 @@ clauses, the response need not include every listed example.
 Return ONLY the json object in markdown."""
 
 import os
+import shutil
 
 # Grader panel. The Nature paper used GPT-5.2 / Gemini 3.1 Pro / Claude Opus 4.6. We deviate
-# deliberately: the base model under evaluation is gpt-5.2, so we EXCLUDE it from the judge panel
-# to avoid self-judging bias, and use the fast non-reasoning gpt-4.1 instead (also ~5x cheaper/faster
-# than gpt-5.2-as-judge). Documented as a grader deviation; for the arms what matters is consistency.
+# deliberately:
+#   (1) the base model under evaluation is gpt-5.2 -> EXCLUDE it (self-judging bias);
+#   (2) cost: route Claude Opus 4.6 through the `claude` CLI (subscription, no API spend) and use
+#       the cheap non-reasoning gpt-4.1 via API; drop the Gemini API (paid) entirely.
+# Two families (OpenAI + Anthropic), clean JSON, ~free. Documented grader deviation; for the arms
+# what matters is a consistent, physician-calibrated panel (verified 82.5% on meta_eval).
 _CANDIDATES = [
     Model("openai", "gpt-4.1"),
-    Model("gemini", "gemini-3.1-pro-preview"),  # paper's Gemini 3.1 Pro; verified available
-    Model("anthropic", "claude-opus-4-6"),
+    Model("claude_cli", "claude-opus-4-6"),  # via `claude -p` (subscription, no API key)
+    Model("gemini", "gemini-3.1-pro-preview"),  # paper's Gemini; PAID API -> only if key set & desired
+    Model("anthropic", "claude-opus-4-6"),      # API path; only if ANTHROPIC_API_KEY set
 ]
 _KEY_ENV = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
 
+def _available(m: Model) -> bool:
+    if m.provider == "claude_cli":
+        return shutil.which("claude") is not None
+    if m.provider == "gemini":  # paid; opt in explicitly to avoid surprise spend
+        return bool(os.getenv("GEMINI_API_KEY")) and os.getenv("CLLM_USE_GEMINI") == "1"
+    return bool(os.getenv(_KEY_ENV.get(m.provider, "")))
+
+
 def available_panel() -> list[Model]:
-    """Judges whose API key is present. Falls back gracefully; caller logs which were used.
-    NOTE: if the base model also appears here, self-judging bias applies — record it."""
-    return [m for m in _CANDIDATES if os.getenv(_KEY_ENV[m.provider])]
+    """Default panel: gpt-4.1 (API) + claude_cli (subscription). Gemini only if CLLM_USE_GEMINI=1.
+    Dedupe to one judge per family. NOTE: base model excluded to avoid self-judging."""
+    out, fams = [], set()
+    for m in _CANDIDATES:
+        fam = "anthropic" if m.provider in ("claude_cli", "anthropic") else m.provider
+        if fam in fams or not _available(m):
+            continue
+        out.append(m); fams.add(fam)
+    return out
 
 
 DEFAULT_PANEL = available_panel()

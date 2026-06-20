@@ -5,6 +5,7 @@
     "GBaker/MedQA-USMLE-4-options": "medqa",
     "openai/healthbench": [
       "healthbench",
+      "consensus",
       "healthbench_hard"
     ]
   },
@@ -17,6 +18,11 @@
     "total_available": 2915,
     "sampled": 500,
     "ids_sha256": "c7c857ebba22879f28fa93c6c7904cad337a515b575ebe02681c38bd31eb6c0f"
+  },
+  "consensus": {
+    "total_available": 2201,
+    "sampled": 500,
+    "ids_sha256": "3fcc4a1541e6d283a1ffedaecde32d31214e08a23103e244a27616e214bc8346"
   },
   "healthbench_hard": {
     "total_available": 523,

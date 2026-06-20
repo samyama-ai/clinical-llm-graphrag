@@ -133,6 +133,7 @@ def main() -> None:
     ap.add_argument("--provider", default=os.getenv("CLLM_PROVIDER", "openai"))
     ap.add_argument("--model", default=os.getenv("CLLM_MODEL", "gpt-5.2"))
     ap.add_argument("--task", choices=["medqa", "healthbench", "both"], default="both")
+    ap.add_argument("--dataset", default="healthbench", help="healthbench | consensus | healthbench_hard")
     args = ap.parse_args()
     model = Model(args.provider, args.model)
     mq = hb = None
@@ -141,8 +142,8 @@ def main() -> None:
             mq = run_medqa(model, args.n)
             print("[gateB] medqa:", json.dumps(mq))
         if args.task in ("healthbench", "both"):
-            hb = run_healthbench(model, args.n)
-            print("[gateB] healthbench:", json.dumps(hb))
+            hb = run_healthbench(model, args.n, dataset=args.dataset)
+            print(f"[gateB] {args.dataset}:", json.dumps(hb))
     except MissingKey as e:
         raise SystemExit(f"[gateB] cannot run — {e}. Set the API key (no mocks allowed).")
     report = {"model": vars(model), "medqa": mq, "healthbench": hb, "reference": REFERENCE}
