@@ -1,0 +1,26 @@
+{
+  "model": {
+    "provider": "openai",
+    "name": "gpt-5.2"
+  },
+  "medqa": null,
+  "healthbench": {
+    "dataset": "consensus",
+    "n": 150,
+    "mean_score": 90.8888888888889
+  },
+  "reference": {
+    "medqa": {
+      "gemini": 97.4,
+      "gpt": 94.2,
+      "claude": 90.2,
+      "tol": 2.0
+    },
+    "healthbench": {
+      "gpt": 88.0,
+      "gemini": 79.3,
+      "claude": 77.0,
+      "tol": 3.0
+    }
+  }
+}
