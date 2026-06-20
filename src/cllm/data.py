@@ -34,18 +34,15 @@ def _sha256_ids(ids: list[str]) -> str:
     return h.hexdigest()
 
 
-def _stable_sample(rows: list[dict], n: int, seed: int) -> list[dict]:
-    """Deterministic sample: sort by a stable per-row key, then seeded shuffle, take n.
+def _match_sample(rows: list[dict], n: int, seed: int) -> list[dict]:
+    """Replicate the Nature paper's selection EXACTLY (clinical_tools_extract/evaluation_pipeline.py
+    `prepare_healthbench_questions`): `random.Random(seed).sample(rows_in_source_order, n)`.
 
-    Sorting first removes any dependence on the dataset's row order, so the subset is a
-    pure function of (content, seed, n)."""
-    rows = sorted(rows, key=lambda r: r["_key"])
+    `rows` MUST be in the dataset's native source order (HF iteration order for MedQA; JSONL file
+    order for HealthBench). `random.sample` is stable across CPython 3.x, so same source + seed=62
+    reproduces their subset. (Earlier we sorted-by-hash first, which diverged → 90.0% vs 94.2%.)"""
     rng = random.Random(seed)
-    idx = list(range(len(rows)))
-    rng.shuffle(idx)
-    take = idx[: min(n, len(rows))]
-    take.sort()
-    return [rows[i] for i in take]
+    return rng.sample(rows, min(n, len(rows)))
 
 
 def _load_medqa() -> list[dict]:
@@ -84,13 +81,15 @@ def _load_healthbench(variant: str) -> list[dict]:
     out = []
     for i, r in enumerate(ds):
         prompt = r.get("prompt") or r.get("conversation") or r.get("question")
-        rubrics = r.get("rubrics") or r.get("rubric") or r.get("criteria") or []
+        # Paper filter: keep only single-turn user prompts (prepare_healthbench_questions).
+        if not (isinstance(prompt, list) and len(prompt) == 1
+                and isinstance(prompt[0], dict) and prompt[0].get("role") == "user"):
+            continue
         item = {
             "id": r.get("prompt_id") or f"{variant}-{i:04d}",
             "prompt": prompt,
-            "rubrics": rubrics,
+            "rubrics": r.get("rubrics") or [],
             "hard": variant == "healthbench_hard",
-            "_key": hashlib.sha256(json.dumps(prompt, sort_keys=True, default=str).encode()).hexdigest(),
         }
         out.append(item)
     return out
@@ -106,7 +105,7 @@ def build(n: int, seed: int) -> dict:
     ]
     for name, loader in loaders:
         rows = loader()
-        sample = _stable_sample(rows, n, seed)
+        sample = _match_sample(rows, n, seed)
         for r in sample:
             r.pop("_key", None)
         path = DATA_DIR / f"{name}.jsonl"

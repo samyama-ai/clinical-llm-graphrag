@@ -11,16 +11,16 @@
   "medqa": {
     "total_available": 1273,
     "sampled": 500,
-    "ids_sha256": "23db6e71c7d262b45e1acf56d803015bee12886f3f737cac1d2985cbe58d42d7"
+    "ids_sha256": "eb6489ef07608c2fc40b79819e6a100f036b7aa55aa568fecba1d0746577c4c2"
   },
   "healthbench": {
-    "total_available": 5000,
+    "total_available": 2915,
     "sampled": 500,
-    "ids_sha256": "794fc4074fa46507a9a14e7ad14af9c9e4b4aa3a34da0baaaf25036d3d1d2efa"
+    "ids_sha256": "c7c857ebba22879f28fa93c6c7904cad337a515b575ebe02681c38bd31eb6c0f"
   },
   "healthbench_hard": {
-    "total_available": 1000,
+    "total_available": 523,
     "sampled": 500,
-    "ids_sha256": "9cf5a5624ab14675e296353205fc85874a3883d98531a45a8c8b3002c16635b3"
+    "ids_sha256": "993eef7db909b19adf1da04b9b900df6e6e3d78fbb23f153bed16d9c9cc56460"
   }
 }
