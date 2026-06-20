@@ -32,9 +32,12 @@ Return ONLY the json object in markdown."""
 
 import os
 
-# Candidate 3-family panel (Nature paper used GPT-5.2 / Gemini 3.1 Pro / Claude Opus 4.6).
+# Grader panel. The Nature paper used GPT-5.2 / Gemini 3.1 Pro / Claude Opus 4.6. We deviate
+# deliberately: the base model under evaluation is gpt-5.2, so we EXCLUDE it from the judge panel
+# to avoid self-judging bias, and use the fast non-reasoning gpt-4.1 instead (also ~5x cheaper/faster
+# than gpt-5.2-as-judge). Documented as a grader deviation; for the arms what matters is consistency.
 _CANDIDATES = [
-    Model("openai", "gpt-5.2"),
+    Model("openai", "gpt-4.1"),
     Model("gemini", "gemini-3.1-pro-preview"),  # paper's Gemini 3.1 Pro; verified available
     Model("anthropic", "claude-opus-4-6"),
 ]
