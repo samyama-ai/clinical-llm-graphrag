@@ -18,7 +18,7 @@ class MissingKey(RuntimeError):
 
 @dataclass
 class Model:
-    provider: str  # "openai" | "anthropic"
+    provider: str  # "openai" | "anthropic" | "gemini"
     name: str      # exact model id, logged into results for version provenance
 
 
@@ -33,8 +33,29 @@ def generate(model: Model, prompt: str, system: str | None = None, max_tokens: i
         msgs = ([{"role": "system", "content": system}] if system else []) + [
             {"role": "user", "content": prompt}
         ]
+        kw = {"model": model.name, "messages": msgs, "temperature": 0.0, "seed": SEED}
+        # gpt-5.x / o-series require max_completion_tokens; older models use max_tokens.
+        if model.name.startswith(("gpt-5", "o1", "o3", "o4")):
+            kw["max_completion_tokens"] = max_tokens
+        else:
+            kw["max_tokens"] = max_tokens
+        resp = client.chat.completions.create(**kw)
+        return resp.choices[0].message.content or ""
+    if model.provider == "gemini":
+        if not os.getenv("GEMINI_API_KEY"):
+            raise MissingKey("GEMINI_API_KEY not set")
+        # Use the OpenAI-compatible endpoint so we keep one client path.
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=os.getenv("GEMINI_API_KEY"),
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
+        msgs = ([{"role": "system", "content": system}] if system else []) + [
+            {"role": "user", "content": prompt}
+        ]
         resp = client.chat.completions.create(
-            model=model.name, messages=msgs, temperature=0.0, seed=SEED, max_tokens=max_tokens
+            model=model.name, messages=msgs, temperature=0.0, max_tokens=max_tokens
         )
         return resp.choices[0].message.content or ""
     if model.provider == "anthropic":

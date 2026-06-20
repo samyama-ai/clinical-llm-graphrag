@@ -30,11 +30,24 @@ Return a json object with the following fields: "explanation" and "criteria_met"
 clauses, the response need not include every listed example.
 Return ONLY the json object in markdown."""
 
-DEFAULT_PANEL = [
+import os
+
+# Candidate 3-family panel (Nature paper used GPT-5.2 / Gemini 3.1 Pro / Claude Opus 4.6).
+_CANDIDATES = [
     Model("openai", "gpt-5.2"),
+    Model("gemini", "gemini-3-pro-preview"),
     Model("anthropic", "claude-opus-4-6"),
-    # third family (Gemini) added when a provider client is wired; panel falls back to available.
 ]
+_KEY_ENV = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+
+
+def available_panel() -> list[Model]:
+    """Judges whose API key is present. Falls back gracefully; caller logs which were used.
+    NOTE: if the base model also appears here, self-judging bias applies — record it."""
+    return [m for m in _CANDIDATES if os.getenv(_KEY_ENV[m.provider])]
+
+
+DEFAULT_PANEL = available_panel()
 
 
 @dataclass
@@ -66,7 +79,7 @@ def score_from_judgements(rubrics: list[RubricItem], met: list[bool]) -> float:
 
 def judge_item(conversation: str, rubrics: list[RubricItem], panel: list[Model] | None = None) -> dict:
     """Run the judge panel over each rubric item; panel-majority per item. Real API calls."""
-    panel = panel or DEFAULT_PANEL
+    panel = panel or available_panel()
     met: list[bool] = []
     for r in rubrics:
         votes = []
