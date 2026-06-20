@@ -10,3 +10,4 @@ __pycache__/
 .DS_Store
 # Keep: data/manifest.json, results/*.csv, results/*.json, results/*.svg
 !data/manifest.json
+data/primekg/
