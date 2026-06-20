@@ -59,15 +59,32 @@ class RubricItem:
     points: float  # may be negative (undesirable behavior)
 
 
+def parse_judgement(raw: str):
+    """Return True/False for criteria_met, or None if genuinely unparseable.
+
+    Robust to ```json fences and truncated explanations: try full JSON first, then a direct
+    regex on the criteria_met field (works even if the JSON is cut off after that field)."""
+    if not raw:
+        return None
+    txt = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+    m = re.search(r"\{.*\}", txt, re.S)
+    if m:
+        try:
+            obj = json.loads(m.group(0))
+            if "criteria_met" in obj:
+                return bool(obj["criteria_met"])
+        except json.JSONDecodeError:
+            pass
+    m = re.search(r'"?criteria_met"?\s*:\s*(true|false)', txt, re.I)
+    if m:
+        return m.group(1).lower() == "true"
+    return None
+
+
 def _parse_judgement(raw: str) -> bool:
-    m = re.search(r"\{.*\}", raw, re.S)
-    if not m:
-        return False
-    try:
-        obj = json.loads(m.group(0))
-        return bool(obj.get("criteria_met", False))
-    except json.JSONDecodeError:
-        return False
+    """Back-compat wrapper: parse failure -> False (only used where None must collapse)."""
+    v = parse_judgement(raw)
+    return bool(v)
 
 
 def score_from_judgements(rubrics: list[RubricItem], met: list[bool]) -> float:
@@ -84,10 +101,16 @@ def judge_item(conversation: str, rubrics: list[RubricItem], panel: list[Model] 
     """Run the judge panel over each rubric item; panel-majority per item. Real API calls."""
     panel = panel or available_panel()
     met: list[bool] = []
+    parse_fail = 0
     for r in rubrics:
         votes = []
         for judge in panel:
-            raw = generate(judge, GRADER_TEMPLATE.format(conversation=conversation, rubric=r.text))
-            votes.append(_parse_judgement(raw))
-        met.append(sum(votes) >= (len(votes) + 1) // 2)  # majority
-    return {"score": score_from_judgements(rubrics, met), "met": met}
+            raw = generate(judge, GRADER_TEMPLATE.format(conversation=conversation, rubric=r.text), max_tokens=2000)
+            v = parse_judgement(raw)
+            if v is None:
+                parse_fail += 1
+            else:
+                votes.append(v)
+        # majority of VALID votes; tie or no-valid-votes -> not met
+        met.append(bool(votes) and sum(votes) > len(votes) / 2)
+    return {"score": score_from_judgements(rubrics, met), "met": met, "parse_fail": parse_fail}
