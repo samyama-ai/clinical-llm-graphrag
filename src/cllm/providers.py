@@ -7,6 +7,8 @@ if missing we raise (we never fabricate model outputs).
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass
 
 SEED = 62
@@ -58,6 +60,26 @@ def generate(model: Model, prompt: str, system: str | None = None, max_tokens: i
             model=model.name, messages=msgs, temperature=0.0, max_tokens=max_tokens
         )
         return resp.choices[0].message.content or ""
+    if model.provider == "claude_cli":
+        # Route through the Claude Code CLI (uses the logged-in subscription, no API key/cost).
+        exe = shutil.which("claude")
+        if not exe:
+            raise MissingKey("claude CLI not found on PATH")
+        cmd = [exe, "-p", "--output-format", "text"]
+        if model.name:
+            cmd += ["--model", model.name]
+        r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            raise RuntimeError(f"claude CLI failed: {r.stderr[:200]}")
+        return r.stdout.strip()
+    if model.provider == "gemini_cli":
+        exe = shutil.which("antigravity") or shutil.which("gemini")
+        if not exe:
+            raise MissingKey("gemini/antigravity CLI not found on PATH")
+        r = subprocess.run([exe, "-p", prompt], input="", capture_output=True, text=True, timeout=300)
+        if r.returncode != 0:
+            raise RuntimeError(f"gemini CLI failed: {r.stderr[:200]}")
+        return r.stdout.strip()
     if model.provider == "anthropic":
         if not os.getenv("ANTHROPIC_API_KEY"):
             raise MissingKey("ANTHROPIC_API_KEY not set")
