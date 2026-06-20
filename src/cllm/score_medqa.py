@@ -7,34 +7,62 @@ from __future__ import annotations
 
 import re
 
+# Markdown emphasis / formatting that models wrap answers in (e.g. "Answer: **D**", "`C`").
+_FORMAT = re.compile(r"[*_`#>]+")
+
 _PATTERNS = [
-    # "The answer is (C)" / "Answer: C" / "final answer: C."
-    re.compile(r"(?:final\s+answer|answer)\s*(?:is)?\s*[:\-]?\s*\(?([A-E])\)?\b", re.I),
-    # a lone "(C)" or "C)" near the end
+    # "The answer is (C)" / "Answer: C" / "final answer - C" (formatting already stripped).
+    re.compile(r"(?:final\s+answer|answer|correct\s+option|best\s+option)\s*(?:is)?\s*[:\-]?\s*\(?([A-E])\)?\b", re.I),
+    # a parenthesized letter "(C)"
     re.compile(r"\(([A-E])\)"),
-    re.compile(r"\b([A-E])[\).:]"),
+    # a letter immediately followed by a delimiter, e.g. "C)" / "C." / "C:" / "C -"
+    re.compile(r"\b([A-E])\s*[\).:\-]"),
+    # a lone capital letter on its own (last resort)
+    re.compile(r"\b([A-E])\b"),
 ]
 
 
 def extract_letter(text: str, options: dict | None = None) -> str | None:
     """Return the chosen option letter (A-E) or None if unparseable.
 
-    Tries explicit answer phrasing first, then bare parenthesized letters, then (if options
-    given) a unique option-text match."""
+    Robust to markdown formatting. Tries explicit answer phrasing first, then parenthesized /
+    delimited letters, then a unique option-text match, then a lone trailing letter. Always takes
+    the LAST match (models restate options then conclude)."""
     if not text:
         return None
-    tail = text.strip()
-    for pat in _PATTERNS:
+    clean = _FORMAT.sub("", text).strip()
+    for pat in _PATTERNS[:-1]:
         m = None
-        for m in pat.finditer(tail):
-            pass  # take the LAST match (models often restate then conclude)
+        for m in pat.finditer(clean):
+            pass
         if m:
             return m.group(1).upper()
     if options:
-        hits = [k for k, v in options.items() if v and v.lower() in tail.lower()]
+        hits = [k for k, v in options.items() if v and v.lower() in clean.lower()]
         if len(hits) == 1:
             return hits[0].upper()
-    return None
+    # last resort: a lone trailing letter in the final two lines
+    tail = "\n".join(clean.splitlines()[-2:])
+    m = None
+    for m in _PATTERNS[-1].finditer(tail):
+        pass
+    return m.group(1).upper() if m else None
+
+
+def extract_letter_llm(text: str, options: dict, extractor_model: str = "gpt-4.1-mini") -> str | None:
+    """LLM-based extraction fallback (the Nature paper's method: GPT-4.1 extracts the final answer,
+    regex as cross-check). Real API call; used only when regex fails. Returns A-E or None."""
+    from .providers import Model, generate
+
+    opts = "\n".join(f"({k}) {v}" for k, v in options.items())
+    prompt = (
+        "Extract ONLY the single final answer letter (A-E) the response selected. "
+        "If none is clearly selected, reply NONE.\n\n"
+        f"Options:\n{opts}\n\nResponse:\n{text}\n\nFinal answer letter:"
+    )
+    out = generate(Model("openai", extractor_model), prompt, max_tokens=8).strip().upper()
+    m = re.search(r"[A-E]", out)
+    return m.group(0) if m else None
 
 
 def score_item(model_output: str, gold: str, options: dict | None = None) -> dict:

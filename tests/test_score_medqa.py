@@ -24,6 +24,13 @@ def test_last_match_wins():
     assert extract_letter("Could be (A) or (B). Answer: B") == "B"
 
 
+def test_markdown_bold_answer():
+    # regression: gpt-5.2 emits "Answer: **D**"; markdown must not break extraction
+    assert extract_letter("**D** — rationale.\nAnswer: **D**") == "D"
+    assert extract_letter("the answer is **(B) Foo**") == "B"
+    assert extract_letter("I pick `C`.") == "C"
+
+
 def test_unparseable_returns_none():
     assert extract_letter("It depends on several factors.") is None
 
