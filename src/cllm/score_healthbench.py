@@ -35,7 +35,7 @@ import os
 # Candidate 3-family panel (Nature paper used GPT-5.2 / Gemini 3.1 Pro / Claude Opus 4.6).
 _CANDIDATES = [
     Model("openai", "gpt-5.2"),
-    Model("gemini", "gemini-3-pro-preview"),
+    Model("gemini", "gemini-3.1-pro-preview"),  # paper's Gemini 3.1 Pro; verified available
     Model("anthropic", "claude-opus-4-6"),
 ]
 _KEY_ENV = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
