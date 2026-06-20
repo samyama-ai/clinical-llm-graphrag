@@ -1,0 +1,12 @@
+# Data + model outputs (regenerable; may be large). Keep manifest + hashes, not raw payloads.
+data/*.jsonl
+data/raw/
+outputs/
+results/*.raw.jsonl
+__pycache__/
+*.pyc
+.env
+.venv/
+.DS_Store
+# Keep: data/manifest.json, results/*.csv, results/*.json, results/*.svg
+!data/manifest.json

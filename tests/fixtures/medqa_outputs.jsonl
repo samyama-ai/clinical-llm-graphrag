@@ -1,0 +1,6 @@
+{"output": "This is a classic presentation. The best option is (C) because of the elevated troponin. Answer: C", "gold": "C", "expect_correct": true}
+{"output": "I would go with beta blockers. Answer: B.", "gold": "A", "expect_correct": false}
+{"output": "The mechanism points to option D) Aspirin, given the antiplatelet effect.", "gold": "D", "expect_correct": true}
+{"output": "Final answer: A", "gold": "A", "expect_correct": true}
+{"output": "Among the choices, the answer is E.", "gold": "E", "expect_correct": true}
+{"output": "It depends on several factors and could be many things.", "gold": "B", "expect_correct": false}

@@ -1,0 +1,8 @@
+# Pinned for reproducibility. Install into ~/projects/venv (global rule).
+datasets==4.8.2
+openai==2.26.0
+anthropic==0.86.0
+numpy==2.2.4
+pandas==2.2.3
+scipy==1.15.2
+tqdm==4.67.1

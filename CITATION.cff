@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: "clinical-llm-graphrag: a reproducible study of knowledge-graph grounding on public clinical benchmarks"
+message: "If you use this software, please cite it and the associated preprint (forthcoming)."
+type: software
+authors:
+  - name: "Samyama.ai"
+repository-code: "https://github.com/samyama-ai/clinical-llm-graphrag"
+license: Apache-2.0
+keywords:
+  - knowledge graph
+  - retrieval-augmented generation
+  - clinical LLM
+  - HealthBench
+  - MedQA

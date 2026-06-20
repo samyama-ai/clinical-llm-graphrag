@@ -1,0 +1,26 @@
+{
+  "n": 500,
+  "seed": 62,
+  "sources": {
+    "GBaker/MedQA-USMLE-4-options": "medqa",
+    "openai/healthbench": [
+      "healthbench",
+      "healthbench_hard"
+    ]
+  },
+  "medqa": {
+    "total_available": 1273,
+    "sampled": 500,
+    "ids_sha256": "23db6e71c7d262b45e1acf56d803015bee12886f3f737cac1d2985cbe58d42d7"
+  },
+  "healthbench": {
+    "total_available": 5000,
+    "sampled": 500,
+    "ids_sha256": "794fc4074fa46507a9a14e7ad14af9c9e4b4aa3a34da0baaaf25036d3d1d2efa"
+  },
+  "healthbench_hard": {
+    "total_available": 1000,
+    "sampled": 500,
+    "ids_sha256": "9cf5a5624ab14675e296353205fc85874a3883d98531a45a8c8b3002c16635b3"
+  }
+}
