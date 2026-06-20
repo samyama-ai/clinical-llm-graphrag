@@ -39,24 +39,21 @@ def answer(conv: str, context: str | None, kind: str) -> str:
     return generate(BASE, prompt, max_tokens=4000)
 
 
-def setup_kg(limit_edges: int | None):
+def setup_kg(limit_edges: int | None = None):
+    """Load nodes + vectors into samyama (HNSW) + build Python adjacency for expansion.
+    Edges are NOT loaded into the engine (expansion uses adjacency). Returns (client, nid2info, adj)."""
     from samyama import SamyamaClient
     client = SamyamaClient.embedded()
-    primekg.load_into(client, limit_edges=limit_edges)
+    primekg.load_into(client, skip_edges=True)
     pids, embs = primekg.embed_nodes(model=EMB_MODEL)
-    info = primekg.build_vector_index(client, pids, embs)
-    print(f"[arms] vector index: {info}")
-    return client
+    nid2info = primekg.build_vector_index(client, pids, embs)
+    adjacency = primekg.build_adjacency()
+    return client, nid2info, adjacency
 
 
-def flat_context(client, q_emb, k=8) -> str:
+def flat_context(client, q_emb, nid2info, k=10) -> str:
     hits = client.vector_search("Entity", "emb", [float(x) for x in q_emb], k)
-    names = []
-    for nid, _ in hits:
-        r = client.query("MATCH (n) WHERE id(n)=%d RETURN n.name, n.etype" % nid).records
-        if r:
-            names.append(f"- {r[0][0]} ({r[0][1]})")
-    return "\n".join(names)
+    return "\n".join(f"- {nid2info[nid][1]}" for nid, _ in hits if nid in nid2info)
 
 
 def conv_text(item) -> str:
@@ -65,14 +62,14 @@ def conv_text(item) -> str:
 
 
 def run(dataset: str, n: int, limit_edges: int | None, do_judge: bool):
-    client = setup_kg(limit_edges)
+    client, nid2info, adjacency = setup_kg(limit_edges)
     items = [json.loads(l) for l in (DATA / f"{dataset}.jsonl").read_text().splitlines()][:n]
     out = []
     for it in items:
         conv = conv_text(it)
         q_emb = embed_query(conv[:2000])
-        ctx_kg = primekg.retrieve(client, q_emb)
-        ctx_flat = flat_context(client, q_emb)
+        ctx_kg = primekg.retrieve(client, q_emb, nid2info, adjacency)
+        ctx_flat = flat_context(client, q_emb, nid2info)
         rec = {"id": it["id"], "question": conv[:300], "kg_facts": ctx_kg.count("\n") + 1 if ctx_kg else 0,
                "ctx_kg": ctx_kg, "ctx_flat": ctx_flat}
         ans = {"A0": answer(conv, None, "A0"),

@@ -64,10 +64,12 @@ def _q(s: str) -> str:
     return s.replace("\\", " ").replace("'", " ").replace("\n", " ")
 
 
-def load_into(client, node_batch: int = 500, log_every: int = 100_000, limit_edges: int | None = None) -> dict:
+def load_into(client, node_batch: int = 500, log_every: int = 100_000, limit_edges: int | None = None,
+              skip_edges: bool = False) -> dict:
     """Load the clinical subset into an embedded samyama-graph client.
-    Nodes via multi-pattern CREATE (~88K/s); edges via index-backed MATCH (~1.6K/s).
-    limit_edges caps edges for smoke tests."""
+    Nodes via multi-pattern CREATE (~88K/s). Edges via index-backed MATCH (~1.6K/s) — but the
+    Cypher planner lacks LIMIT-pushdown on expand, so retrieval expands via a Python adjacency
+    instead (see build_adjacency); pass skip_edges=True to load nodes+vectors only (~0.4s)."""
     import time
     nodes = [json.loads(l) for l in (SUBSET_DIR / "nodes.jsonl").read_text().splitlines()]
     client.query("CREATE INDEX ON :Entity(pid)")
@@ -78,6 +80,8 @@ def load_into(client, node_batch: int = 500, log_every: int = 100_000, limit_edg
                        % (_q(n["id"]), _q(n["name"]), _q(n["type"])) for n in chunk)
         client.query("CREATE " + pat)
     print(f"[primekg] {len(nodes)} nodes in {time.time()-t0:.1f}s")
+    if skip_edges:
+        return {"nodes": len(nodes), "edges": 0}
     t0 = time.time(); n = 0
     with (SUBSET_DIR / "edges.csv").open() as f:
         r = csv.DictReader(f)
@@ -117,21 +121,52 @@ def embed_nodes(model: str = "text-embedding-3-small", batch: int = 1000) -> tup
     return pids, arr
 
 
-def build_vector_index(client, pids, embs) -> dict:
-    """Add node embeddings to the graph + build HNSW index. Maps pid->internal id via query."""
-    from samyama import SamyamaClient  # noqa
+def build_vector_index(client, pids, embs):
+    """Add node embeddings + build HNSW index. Returns nid2info = {internal_id: (pid, name)}."""
     dim = len(embs[0])
     client.create_vector_index("Entity", "emb", dim)
-    # internal id <- pid
-    rows = client.query("MATCH (n:Entity) RETURN id(n), n.pid").records
-    pid2nid = {pid: nid for nid, pid in rows}
+    rows = client.query("MATCH (n:Entity) RETURN id(n), n.pid, n.name").records
+    nid2info = {nid: (pid, name) for nid, pid, name in rows}
+    pid2nid = {pid: nid for nid, pid, _ in rows}
     added = 0
     for pid, vec in zip(pids, embs):
         nid = pid2nid.get(pid)
         if nid is not None:
             client.add_vector("Entity", "emb", nid, [float(x) for x in vec])
             added += 1
-    return {"indexed": added, "dim": dim}
+    print(f"[primekg] vector index: indexed={added} dim={dim}")
+    return nid2info
+
+
+# raw (CSV-form) clinical relations for adjacency expansion (excludes *_protein molecular noise)
+_CLINICAL_RAW = {
+    "indication", "contraindication", "off-label use", "drug_effect", "drug_drug",
+    "disease_phenotype_positive", "disease_phenotype_negative", "disease_disease", "phenotype_phenotype",
+}
+
+
+def build_adjacency(keep=_CLINICAL_RAW, cap: int = 40) -> dict:
+    """Precompute pid -> [(relation, neighbor_name), ...] from edges.csv, capped per node.
+    Sidesteps the engine's expand-materialization on high-degree nodes (LIMIT not pushed down)."""
+    name = {}
+    for line in (SUBSET_DIR / "nodes.jsonl").read_text().splitlines():
+        d = json.loads(line)
+        name[d["id"]] = d["name"]
+    adj: dict[str, list] = {}
+    with (SUBSET_DIR / "edges.csv").open() as f:
+        r = csv.reader(f)
+        next(r)
+        for rel, x, y in r:
+            if keep is not None and rel not in keep:
+                continue
+            ax = adj.setdefault(x, [])
+            if len(ax) < cap:
+                ax.append((rel, name.get(y, y)))
+            ay = adj.setdefault(y, [])
+            if len(ay) < cap:
+                ay.append((rel, name.get(x, x)))
+    print(f"[primekg] adjacency: {len(adj)} nodes (cap {cap}/node)")
+    return adj
 
 
 # Clinically-meaningful relations for grounding (exclude noisy *_protein associations, which are
@@ -142,23 +177,23 @@ _CLINICAL_RELS = {
 }
 
 
-def retrieve(client, q_emb, k: int = 8, max_neighbors: int = 30, keep=_CLINICAL_RELS, max_lines: int = 40) -> str:
-    """Hybrid retrieval: ANN over node embeddings -> 1-hop subgraph (clinical relations only)
-    -> text context. Filters out *_protein noise so grounding stays clinically precise (Pillar-1)."""
+def retrieve(client, q_emb, nid2info, adjacency, k: int = 10, max_lines: int = 40) -> str:
+    """Hybrid retrieval: samyama HNSW vector_search (entity linking) -> Python adjacency expansion
+    (clinical relations, degree-capped) -> text context. Vector search is the engine's job; the
+    adjacency works around the expand LIMIT-pushdown gap on high-degree nodes."""
     hits = client.vector_search("Entity", "emb", [float(x) for x in q_emb], k)
     lines, seen = [], set()
     for nid, _ in hits:
-        rows = client.query(
-            "MATCH (a) WHERE id(a)=%d MATCH (a)-[r]-(b:Entity) "
-            "RETURN a.name, type(r), b.name LIMIT %d" % (nid, max_neighbors)).records
-        for a, rel, b in rows:
-            if keep is not None and rel.upper() not in keep:
-                continue
-            key = (a, rel, b)
+        info = nid2info.get(nid)
+        if not info:
+            continue
+        pid, aname = info
+        for rel, nb in adjacency.get(pid, []):
+            key = (aname, rel, nb)
             if key in seen:
                 continue
             seen.add(key)
-            lines.append(f"- {a} —[{rel.lower().replace('_', ' ')}]→ {b}")
+            lines.append(f"- {aname} —[{rel.replace('_', ' ')}]→ {nb}")
     return "\n".join(lines[:max_lines])
 
 

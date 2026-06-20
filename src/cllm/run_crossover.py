@@ -56,7 +56,7 @@ def _gen_score(model, it, kind, kg, flat):
 
 
 def run(n: int, limit_edges):
-    client = setup_kg(limit_edges)
+    client, nid2info, adjacency = setup_kg(limit_edges)
     items = [json.loads(l) for l in (DATA / "medqa.jsonl").read_text().splitlines()][:n]
 
     # Pre-compute retrieval ONCE per item (model-independent).
@@ -65,7 +65,7 @@ def run(n: int, limit_edges):
     for it in items:
         q = it["question"] + " " + " ".join(it["options"].values())
         emb = embed_query(q[:2000])
-        ctx[it["id"]] = (primekg.retrieve(client, emb), flat_context(client, emb))
+        ctx[it["id"]] = (primekg.retrieve(client, emb, nid2info, adjacency), flat_context(client, emb, nid2info))
 
     summary = {}
     for model in LADDER:
