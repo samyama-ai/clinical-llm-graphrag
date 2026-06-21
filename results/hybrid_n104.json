@@ -1,0 +1,110 @@
+{
+  "A_det": {
+    "real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "fictional": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 80
+    }
+  },
+  "gpt-4.1-nano": {
+    "A0_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "A_agent_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "lift_real": 0.0,
+    "A0_fictional": {
+      "acc": 22.5,
+      "ci": 9.2,
+      "n": 80
+    },
+    "A_agent_fictional": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 80
+    },
+    "lift_fictional": 77.5
+  },
+  "gpt-4o-mini": {
+    "A0_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "A_agent_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "lift_real": 0.0,
+    "A0_fictional": {
+      "acc": 25.0,
+      "ci": 9.5,
+      "n": 80
+    },
+    "A_agent_fictional": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 80
+    },
+    "lift_fictional": 75.0
+  },
+  "gpt-4.1": {
+    "A0_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "A_agent_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "lift_real": 0.0,
+    "A0_fictional": {
+      "acc": 32.5,
+      "ci": 10.3,
+      "n": 80
+    },
+    "A_agent_fictional": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 80
+    },
+    "lift_fictional": 67.5
+  },
+  "gpt-5.2": {
+    "A0_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "A_agent_real": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 24
+    },
+    "lift_real": 0.0,
+    "A0_fictional": {
+      "acc": 31.2,
+      "ci": 10.2,
+      "n": 80
+    },
+    "A_agent_fictional": {
+      "acc": 100.0,
+      "ci": 0.0,
+      "n": 80
+    },
+    "lift_fictional": 68.8
+  }
+}
