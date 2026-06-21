@@ -1,0 +1,17 @@
+{
+  "synth_lift_agent": {
+    "n": 12,
+    "mean": 76.6,
+    "std": 2.9,
+    "min": 72.0,
+    "max": 82.0
+  },
+  "hybrid_fictional_lift": {
+    "n": 16,
+    "mean": 77.2,
+    "std": 7.7,
+    "min": 67.5,
+    "max": 90.0
+  },
+  "note": "positives across seeds 62/7/123; A_agent ~100 every run by construction."
+}

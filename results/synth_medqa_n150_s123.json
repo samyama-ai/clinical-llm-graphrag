@@ -1,0 +1,47 @@
+{
+  "_cypher_nonempty_rate": 100.0,
+  "gpt-4.1-nano": {
+    "A0": {
+      "acc": 24.7,
+      "ci": 6.9
+    },
+    "A_agent": {
+      "acc": 97.3,
+      "ci": 2.6
+    },
+    "lift_agent": 72.6
+  },
+  "gpt-4o-mini": {
+    "A0": {
+      "acc": 28.0,
+      "ci": 7.2
+    },
+    "A_agent": {
+      "acc": 100.0,
+      "ci": 0.0
+    },
+    "lift_agent": 72.0
+  },
+  "gpt-4.1": {
+    "A0": {
+      "acc": 18.0,
+      "ci": 6.1
+    },
+    "A_agent": {
+      "acc": 100.0,
+      "ci": 0.0
+    },
+    "lift_agent": 82.0
+  },
+  "gpt-5.2": {
+    "A0": {
+      "acc": 26.0,
+      "ci": 7.0
+    },
+    "A_agent": {
+      "acc": 100.0,
+      "ci": 0.0
+    },
+    "lift_agent": 74.0
+  }
+}

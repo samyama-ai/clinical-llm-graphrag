@@ -1,0 +1,11 @@
+{
+  "n_questions": 80,
+  "n_diseases": 40,
+  "A0_acc": 18.8,
+  "A_text_acc": 100.0,
+  "A_GAK_acc": 100.0,
+  "llm_calls_A_text": 80,
+  "llm_calls_A_GAK_enrich": 40,
+  "cache_hits_A_GAK": 40,
+  "enriched_nodes_provenance_tagged": 160
+}
