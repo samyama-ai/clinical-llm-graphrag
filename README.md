@@ -9,7 +9,7 @@ biomedical KG **PrimeKG** — plus a reproduction of a contested *Nature Medicin
 > **decisive** (chance → ~100%). And "out-of-training" ≠ "unknown": real recent drugs are largely
 > inferable from drug-name conventions, so the boundary is **training ∪ inferable**.
 
-Companion paper: *"Knowledge-Graph Grounding Helps LLMs Only for Out-of-Training Knowledge."*
+Companion paper: *"Knowledge-Graph Grounding Helps LLMs Only for Out-of-Training Knowledge."* — 📄 **[arXiv:2606.22419](https://arxiv.org/abs/2606.22419)** (cs.CL).
 
 ## Findings
 
